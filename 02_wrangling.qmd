@@ -19,12 +19,48 @@ image_files |>
   select(name) |> 
   mutate(artist = sub(".*/(.*)\\..*$", "\\1", name))
 
-bb_tbl |> 
-  group_by(가수그룹)
+bb_gt_tbl <- bb_tbl |> 
+  group_by(가수그룹) |> 
+  summarise(최고순위   = min(최고순위, na.rm = TRUE),
+            최고잔존주 = max(잔존주, na.rm = TRUE)) |> 
+  arrange(최고순위) |> 
+  # 이미지 파일 링크
+  left_join(image_files |> 
+              enframe() |> 
+              select(name) |> 
+              mutate(artist = sub(".*/(.*)\\..*$", "\\1", name)),
+              by = c("가수그룹" = "artist")) |> 
+  rename(pic = name) |> 
+  select(pic, everything())
   
-
-
+bb_gt_tbl |> 
+  write_csv("data/bb_gt_tbl.csv")
 ```
+
+
+# 그래프
+
+```{r}
+draw_rank_ggplot <- function(artist = "방탄소년단") {
+  bb_tbl |> 
+    filter(가수그룹 == artist) |> 
+    group_by(연도) |>
+    summarise(최고순위 = min(최고순위, na.rm = TRUE)) |>
+    ggplot(aes( x = 연도, y = 최고순위)) +
+      geom_point() +
+      geom_line() +
+      scale_y_continuous(trans = "reverse", breaks = c(1, seq(10, 100, 10)),
+                         limits = c(100,1)) +
+      # theme_void() +
+      scale_x_continuous(limits = c(2009, 2024))    
+}
+
+draw_rank_ggplot("방탄소년단")
+draw_rank_ggplot("싸이")
+
+  
+```
+
 
 
 

@@ -1,0 +1,89 @@
+---
+title: "GT 표"
+editor_options: 
+  chunk_output_type: console
+---
+
+# 표
+
+```{r}
+library(rvest)
+library(tidyverse)
+library(gt)
+
+bb_gt_tbl <- read_csv("data/bb_gt_tbl.csv")
+
+# 그래프
+
+draw_rank_ggplot <- function(artist = "방탄소년단") {
+  bb_tbl |> 
+    filter(가수그룹 == artist) |> 
+    group_by(연도) |>
+    summarise(최고순위 = min(최고순위, na.rm = TRUE)) |>
+    ggplot(aes( x = 연도, y = 최고순위)) +
+      geom_point(size = 10) +
+      geom_line(size = 3) +
+      scale_y_continuous(trans = "reverse", breaks = c(1, seq(10, 100, 10)),
+                         limits = c(100,1)) +
+      theme_void() +
+      scale_x_continuous(limits = c(2009, 2024))    
+}
+
+
+# Create the gt table
+billboard_gt <- bb_gt_tbl %>%
+  mutate(그래프 = 가수그룹) |> 
+  gt() %>%
+  cols_align(
+    align = "center",
+    columns = c(pic)
+  ) %>%
+  cols_width(
+    pic ~ px(120)  # Adjust the width of the image column if needed
+  ) |> 
+  text_transform(
+    locations = cells_body(columns = pic),
+    fn = function(x) {
+      local_image(
+        filename = x,
+        height = 50
+      )
+    }
+  ) |> 
+  cols_label(pic = "사진",
+             최고잔존주 = "차트 인 기간(주)") |> 
+  gtExtras::gt_theme_538() |> 
+  tab_header(
+    title = html("한국인과&nbsp;&nbsp;", local_image("images/Billboard_logo.svg.png", height = 20), "&nbsp;&nbsp;Hot 100"),
+    subtitle = md("한국인 빌보드 차트에 최고, 오래 머물렀던 곡들")
+    ) |> 
+  text_transform(
+    locations = cells_body(columns = 그래프),
+    fn = function(column) {
+      map(column, draw_rank_ggplot) |> 
+        ggplot_image(height = px(50), aspect_ratio = 3)
+    }
+  ) |> 
+  cols_align(
+    align = "center",
+    columns = everything()
+  ) |> 
+  tab_style(
+    style = cell_text(align = "center"),
+    locations = cells_column_labels(columns = everything()))  |> 
+  tab_footnote(footnote = md("**제작:** 한국 R 사용자회"))
+
+billboard_gt |> 
+  gtsave("images/billboard_gt.png")
+```
+
+
+
+
+
+
+
+
+
+
+
