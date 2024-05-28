@@ -1,0 +1,83 @@
+---
+title: "크롤링"
+editor_options: 
+  chunk_output_type: console
+---
+
+# 나무위키
+
+```{r}
+library(rvest)
+library(tidyverse)
+
+bb_url <- URLdecode("https://namu.wiki/w/%EB%B9%8C%EB%B3%B4%EB%93%9C%20%EC%B0%A8%ED%8A%B8/%EA%B8%B0%EB%A1%9D/%ED%95%9C%EA%B5%AD")
+
+bb_html <- read_html(URLencode(bb_url))
+
+bb_raw <- bb_html |> 
+  html_elements("table") %>% 
+  .[5] |> 
+  html_table(header = TRUE) %>%
+  .[[1]] |>
+  janitor::clean_names(ascii = FALSE) 
+
+bb_tbl <- bb_raw |> 
+  mutate(연도 = parse_number(연도),
+         최고_순위 = parse_number(최고_순위)) |> 
+  mutate(잔존주 = parse_number(차트_인_기간_주)) |> 
+  select(연도, 가수, 최고순위=최고_순위, 잔존주) |> 
+  mutate(가수그룹 = case_when(str_detect(가수, "방탄소년단") ~ "방탄소년단",
+                              str_detect(가수, "BLACKPINK") ~ "BLACKPINK",
+                              str_detect(가수, "싸이") ~ "싸이",
+                              TRUE ~ 가수)) 
+
+fs::dir_create("data")  
+
+bb_tbl |> 
+  write_csv("data/bb.csv")
+```
+
+
+# 가수 이미지
+
+```{r}
+library(rvest)
+library(tidyverse)
+
+bb_tbl <- read_csv("data/bb.csv")
+
+download_images <- function(pic_url, artist) {
+  
+  pic_html <- read_html(pic_url)
+  
+  if(artist == "싸이") {
+    artist_pic_link <- pic_html %>% 
+      html_elements(".infobox.vcard.plainlist img") %>% 
+      html_attr("src") %>% 
+      .[2] 
+  } else {
+    artist_pic_link <- pic_html %>% 
+      html_elements(".infobox.vcard.plainlist img") %>% 
+      html_attr("src") %>% 
+      .[3] 
+  }
+
+  # Download the file
+  download.file(url = paste0("https:", artist_pic_link), 
+                destfile = paste0("images/artists/", artist, ".jpg"), 
+                mode = "wb")
+}
+
+download_images()
+
+
+bb_tbl |> 
+  count(가수그룹, sort = TRUE) |> 
+  mutate(url = str_glue("https://ko.wikipedia.org/wiki/{가수그룹}")) |> 
+  mutate(images = map2(url, 가수그룹, safely(download_images)) )
+```
+
+
+
+
+

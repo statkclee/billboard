@@ -1,0 +1,32 @@
+---
+title: "데이터와 사투"
+editor_options: 
+  chunk_output_type: console
+---
+
+# 순위 + 이미지
+
+```{r}
+library(rvest)
+library(tidyverse)
+
+bb_tbl <- read_csv("data/bb.csv")
+
+image_files <- fs::dir_ls("images/artists/")
+
+image_files |> 
+  enframe() |> 
+  select(name) |> 
+  mutate(artist = sub(".*/(.*)\\..*$", "\\1", name))
+
+bb_tbl |> 
+  group_by(가수그룹)
+  
+
+
+```
+
+
+
+
+
