@@ -23,7 +23,7 @@ image_files |>
 bb_gt_tbl <- bb_tbl |> 
   group_by(가수그룹) |> 
   summarise(최고순위   = min(최고순위, na.rm = TRUE),
-            최고잔존주 = max(잔존주, na.rm = TRUE)) |> 
+            최고잔존주 = sum(잔존주, na.rm = TRUE)) |> 
   arrange(최고순위) |> 
   # 이미지 파일 링크
   left_join(image_files |> 
