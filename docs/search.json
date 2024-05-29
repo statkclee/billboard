@@ -1,0 +1,30 @@
+[
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site\n\n1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "02_wrangling.html",
+    "href": "02_wrangling.html",
+    "title": "데이터와 사투",
+    "section": "",
+    "text": "순위 + 이미지\n\nlibrary(rvest)\nlibrary(tidyverse)\n\nbb_tbl &lt;- read_csv(\"data/bb.csv\")\n\nimage_files &lt;- fs::dir_ls(\"images/artists/\")\n\nimage_files |&gt; \n  enframe() |&gt; \n  select(name) |&gt; \n  mutate(artist = sub(\".*/(.*)\\\\..*$\", \"\\\\1\", name))\n\nbb_gt_tbl &lt;- bb_tbl |&gt; \n  group_by(가수그룹) |&gt; \n  summarise(최고순위   = min(최고순위, na.rm = TRUE),\n            최고잔존주 = max(잔존주, na.rm = TRUE)) |&gt; \n  arrange(최고순위) |&gt; \n  # 이미지 파일 링크\n  left_join(image_files |&gt; \n              enframe() |&gt; \n              select(name) |&gt; \n              mutate(artist = sub(\".*/(.*)\\\\..*$\", \"\\\\1\", name)),\n              by = c(\"가수그룹\" = \"artist\")) |&gt; \n  rename(pic = name) |&gt; \n  select(pic, everything())\n  \nbb_gt_tbl |&gt; \n  write_csv(\"data/bb_gt_tbl.csv\")\n\n\n\n그래프\n\ndraw_rank_ggplot &lt;- function(artist = \"방탄소년단\") {\n  bb_tbl |&gt; \n    filter(가수그룹 == artist) |&gt; \n    group_by(연도) |&gt;\n    summarise(최고순위 = min(최고순위, na.rm = TRUE)) |&gt;\n    ggplot(aes( x = 연도, y = 최고순위)) +\n      geom_point() +\n      geom_line() +\n      scale_y_continuous(trans = \"reverse\", breaks = c(1, seq(10, 100, 10)),\n                         limits = c(100,1)) +\n      # theme_void() +\n      scale_x_continuous(limits = c(2009, 2024))    \n}\n\ndraw_rank_ggplot(\"방탄소년단\")\ndraw_rank_ggplot(\"싸이\")"
+  },
+  {
+    "objectID": "01_crawl.html",
+    "href": "01_crawl.html",
+    "title": "크롤링",
+    "section": "",
+    "text": "나무위키\n\nlibrary(rvest)\nlibrary(tidyverse)\n\nbb_url &lt;- URLdecode(\"https://namu.wiki/w/%EB%B9%8C%EB%B3%B4%EB%93%9C%20%EC%B0%A8%ED%8A%B8/%EA%B8%B0%EB%A1%9D/%ED%95%9C%EA%B5%AD\")\n\nbb_html &lt;- read_html(URLencode(bb_url))\n\nbb_raw &lt;- bb_html |&gt; \n  html_elements(\"table\") %&gt;% \n  .[5] |&gt; \n  html_table(header = TRUE) %&gt;%\n  .[[1]] |&gt;\n  janitor::clean_names(ascii = FALSE) \n\nbb_tbl &lt;- bb_raw |&gt; \n  mutate(연도 = parse_number(연도),\n         최고_순위 = parse_number(최고_순위)) |&gt; \n  mutate(잔존주 = parse_number(차트_인_기간_주)) |&gt; \n  select(연도, 가수, 곡명, 최고순위=최고_순위, 잔존주) |&gt; \n  mutate(가수그룹 = case_when(str_detect(가수, \"방탄소년단\") ~ \"방탄소년단\",\n                              str_detect(가수, \"BLACKPINK\") ~ \"BLACKPINK\",\n                              str_detect(가수, \"싸이\") ~ \"싸이\",\n                              TRUE ~ 가수)) \n\nfs::dir_create(\"data\")  \n\nbb_tbl |&gt; \n  write_csv(\"data/bb.csv\")\n\n\n\n가수 이미지\n\nlibrary(rvest)\nlibrary(tidyverse)\n\nbb_tbl &lt;- read_csv(\"data/bb.csv\")\n\ndownload_images &lt;- function(pic_url, artist) {\n  \n  pic_html &lt;- read_html(pic_url)\n  \n  if(artist == \"싸이\") {\n    artist_pic_link &lt;- pic_html %&gt;% \n      html_elements(\".infobox.vcard.plainlist img\") %&gt;% \n      html_attr(\"src\") %&gt;% \n      .[2] \n  } else {\n    artist_pic_link &lt;- pic_html %&gt;% \n      html_elements(\".infobox.vcard.plainlist img\") %&gt;% \n      html_attr(\"src\") %&gt;% \n      .[3] \n  }\n\n  # Download the file\n  download.file(url = paste0(\"https:\", artist_pic_link), \n                destfile = paste0(\"images/artists/\", artist, \".jpg\"), \n                mode = \"wb\")\n}\n\ndownload_images()\n\n\nbb_tbl |&gt; \n  count(가수그룹, sort = TRUE) |&gt; \n  mutate(url = str_glue(\"https://ko.wikipedia.org/wiki/{가수그룹}\")) |&gt; \n  mutate(images = map2(url, 가수그룹, safely(download_images)) )"
+  },
+  {
+    "objectID": "03_gt_table.html",
+    "href": "03_gt_table.html",
+    "title": "GT 표",
+    "section": "",
+    "text": "표\n\nlibrary(rvest)\nlibrary(tidyverse)\nlibrary(gt)\n\nbb_gt_tbl &lt;- read_csv(\"data/bb_gt_tbl.csv\")\n\n# 그래프\n\ndraw_rank_ggplot &lt;- function(artist = \"방탄소년단\") {\n  bb_tbl |&gt; \n    filter(가수그룹 == artist) |&gt; \n    group_by(연도) |&gt;\n    summarise(최고순위 = min(최고순위, na.rm = TRUE)) |&gt;\n    ggplot(aes( x = 연도, y = 최고순위)) +\n      geom_point(size = 10) +\n      geom_line(size = 3) +\n      scale_y_continuous(trans = \"reverse\", breaks = c(1, seq(10, 100, 10)),\n                         limits = c(100,1)) +\n      theme_void() +\n      scale_x_continuous(limits = c(2009, 2024))    \n}\n\n\n# Create the gt table\nbillboard_gt &lt;- bb_gt_tbl %&gt;%\n  mutate(그래프 = 가수그룹) |&gt; \n  gt() %&gt;%\n  cols_align(\n    align = \"center\",\n    columns = c(pic)\n  ) %&gt;%\n  cols_width(\n    pic ~ px(120)  # Adjust the width of the image column if needed\n  ) |&gt; \n  text_transform(\n    locations = cells_body(columns = pic),\n    fn = function(x) {\n      local_image(\n        filename = x,\n        height = 50\n      )\n    }\n  ) |&gt; \n  cols_label(pic = \"사진\",\n             최고잔존주 = \"차트 인 기간(주)\") |&gt; \n  gtExtras::gt_theme_538() |&gt; \n  tab_header(\n    title = html(\"한국인과&nbsp;&nbsp;\", local_image(\"images/Billboard_logo.svg.png\", height = 20), \"&nbsp;&nbsp;Hot 100\"),\n    subtitle = md(\"한국인 빌보드 차트에 최고, 오래 머물렀던 곡들\")\n    ) |&gt; \n  text_transform(\n    locations = cells_body(columns = 그래프),\n    fn = function(column) {\n      map(column, draw_rank_ggplot) |&gt; \n        ggplot_image(height = px(50), aspect_ratio = 3)\n    }\n  ) |&gt; \n  cols_align(\n    align = \"center\",\n    columns = everything()\n  ) |&gt; \n  tab_style(\n    style = cell_text(align = \"center\"),\n    locations = cells_column_labels(columns = everything()))  |&gt; \n  tab_footnote(footnote = md(\"**제작:** 한국 R 사용자회\"))\n\nbillboard_gt |&gt; \n  gtsave(\"images/billboard_gt.png\")"
+  }
+]

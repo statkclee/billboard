@@ -7,6 +7,7 @@ editor_options:
 # 순위 + 이미지
 
 ```{r}
+#| eval: false
 library(rvest)
 library(tidyverse)
 
@@ -41,6 +42,7 @@ bb_gt_tbl |>
 # 그래프
 
 ```{r}
+#| eval: false
 draw_rank_ggplot <- function(artist = "방탄소년단") {
   bb_tbl |> 
     filter(가수그룹 == artist) |> 

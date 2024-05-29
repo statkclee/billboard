@@ -7,6 +7,7 @@ editor_options:
 # 나무위키
 
 ```{r}
+#| eval: false
 library(rvest)
 library(tidyverse)
 
@@ -25,7 +26,7 @@ bb_tbl <- bb_raw |>
   mutate(연도 = parse_number(연도),
          최고_순위 = parse_number(최고_순위)) |> 
   mutate(잔존주 = parse_number(차트_인_기간_주)) |> 
-  select(연도, 가수, 최고순위=최고_순위, 잔존주) |> 
+  select(연도, 가수, 곡명, 최고순위=최고_순위, 잔존주) |> 
   mutate(가수그룹 = case_when(str_detect(가수, "방탄소년단") ~ "방탄소년단",
                               str_detect(가수, "BLACKPINK") ~ "BLACKPINK",
                               str_detect(가수, "싸이") ~ "싸이",
@@ -41,6 +42,7 @@ bb_tbl |>
 # 가수 이미지
 
 ```{r}
+#| eval: false
 library(rvest)
 library(tidyverse)
 

@@ -1,19 +1,33 @@
 project:
   type: website
+  output-dir: docs
 
 website:
   title: "billboard"
-  navbar:
-    left:
-      - href: index.qmd
-        text: Home
-      - about.qmd
+  
 
 format:
   html:
-    theme: cosmo
-    css: styles.css
+    theme: [cosmo, styles.scss]
+    highlight-style: atom-one-dark
     toc: true
+    lightbox:
+      match: auto
+      loop: false    
+    grid:
+      sidebar-width: 150px
 
+lightbox: true
 
+knitr:
+  opts_chunk: 
+    eval: false
+    message: false
+    warning: false
+    collapse: true
+    comment: "#>" 
+    R.options:
+      knitr.graphics.auto_pdf: true
+editor_options: 
+  chunk_output_type: console
 
